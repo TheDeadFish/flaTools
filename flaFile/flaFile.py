@@ -12,11 +12,20 @@ domHeadOrder = [
 
 class Symbol:
 
-	def __init__(self, symbol, attr, data, name):
+	def __init__(self, symbol, attr):
 		self.symbol = symbol;	self.attr = attr;
-		self.data = data; self.name = name;
+		self.data = None; self.name = attr.get('name');
 		self.hash_ = None; self.hash = None;
 		self.refs = []; self.keep = False;
+		
+	def get_path(self):
+		if self.symbol: return 'LIBRARY/'+self.attr['href']
+		return 'bin/'+self.attr[self.attrHref()]
+		
+	def attrHref(self):
+		for x in self.attr:
+			if x.endswith("HRef"):
+				return x
 
 	def do_hash(self, dict):
 		if self.hash: return;
@@ -29,75 +38,27 @@ class Symbol:
 			hash.update(dict[x].hash)
 		self.hash = hash.digest();
 		
-"""
-	def update(self, map):
-		if self.symbol:
-		
-			for x in self.refs:
-				
-				
-				
-			
-		
-		
-			data.replace(
+	def init(self, data):
+		self.data = data
+		hash = hashlib.sha1()
+		if not self.symbol:
+			hash.update(data);
 		else:
-			self.attr['name'] = map[self.name]
-"""
-
-def parse_symbols(doc, files):
-	symList = {}
-	
-	media = doc.getElementsByTagName('media');
-	for x in media[0].childNodes:
-		if x.nodeType != x.ELEMENT_NODE: continue
-		
-		# basic symbol info
-		attr = elem_to_dict(x)
-		for x in attr:
-			if x.endswith("HRef"):
-				data = files['bin/'+attr[x]]
-		tmp = Symbol(False, attr, data, attr['name']);
-		
-		# content hash
-		hash = hashlib.sha1()
-		hash.update(data);
-		tmp.hash_ = hash.digest();
-		
-		symList[tmp.name] = tmp
-	
-	symbols = doc.getElementsByTagName('symbols');
-	for x in symbols[0].childNodes:
-		if x.nodeType != x.ELEMENT_NODE: continue
-		
-		# basic symbol info
-		attr = elem_to_dict(x)
-		data = files['LIBRARY/'+attr['href']]
-		name = index_qstr(data, 'name="');
-		tmp = Symbol(True, attr, data, name);
-		
-		# parse symbol data
-		symList[tmp.name] = tmp
-		hash = hashlib.sha1()
-		
-		# get library refs
-		pos = tmp.data.index('>')+1
-		while True:
-			prevPos = pos
-			pos = find_end(tmp.data, 'libraryItemName="', pos)
-			if pos < 0: 
-				hash.update(buffer(tmp.data, prevPos))
-				tmp.hash_ = hash.digest(); break;
-			hash.update(buffer(tmp.data, prevPos, pos-prevPos))
-			end = tmp.data.index('"', pos)	
-			list_add_unique(tmp.refs, tmp.data[pos:end])
-			pos = end
-		
-	# compute hashes
-	for x in symList:
-		symList[x].do_hash(symList);
+			self.name = index_qstr(self.data, 'name="');
 			
-	return symList
+			# get library refs
+			pos = self.data.index('>')+1
+			while True:
+				prevPos = pos
+				pos = find_end(self.data, 'libraryItemName="', pos)
+				if pos < 0: 
+					hash.update(buffer(self.data, prevPos)); break;
+				hash.update(buffer(self.data, prevPos, pos-prevPos))
+				end = self.data.index('"', pos)	
+				list_add_unique(self.refs, self.data[pos:end])
+				pos = end
+		
+		self.hash_ = hash.digest();
 	
 class FlaFile:
 
@@ -106,10 +67,27 @@ class FlaFile:
 		del self.files['bin/SymDepend.cache']
 		domData = self.files['DOMDocument.xml']
 		self.dom = load_xml(domData)
+				
+		# load the symbols
+		self.symbols = {}
+		self.__parse_symbols('media', False)
+		self.__parse_symbols('symbols', True)
+		for k,v in self.symbols.iteritems(): v.do_hash(self.symbols);
 		
 	def save(self, fName):
+		for k,v in self.symbols.iteritems(): self.files[v.get_path()] = v.data
 		self.files['DOMDocument.xml'] =	save_xml(self.dom, domHeadOrder)
 		save_zip(fName, self.files)
+			
+	def __parse_symbols(self, nodeName, symbMode):
+		nodes = self.dom.getElementsByTagName(nodeName);
+		for x in nodes[0].childNodes:
+			if x.nodeType != x.ELEMENT_NODE: continue
+			symb = Symbol(symbMode, elem_to_dict(x));
+			symb.init(self.files.pop(symb.get_path()))
+			self.symbols[symb.name] = symb
+			
+		
 		
 """
 		
