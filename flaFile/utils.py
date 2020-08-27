@@ -13,6 +13,9 @@ def find_end(str, elem, start=0):
 	if pos >= 0: pos += len(elem);
 	return pos
 	
+def qstr_skip(str, s):
+	return str.index('"', str.index('"', s)+1)+1
+	
 def index_qstr(str, elem, start=0):
 	pos = index_end(str, elem, start);
 	end = str.index('"', pos)
@@ -30,10 +33,26 @@ def save_zip(fName, files):
 	with zipfile.ZipFile(fName, 'w') as myzip:
 		for x in files:
 			myzip.writestr(x, files[x])
-			
+
 def save_xml(doc, tmpl):
-	str = doc.toxml(); y = tmpl.index('>',22)+22
-	return tmpl[:tmpl.index('>')] + str[y:]
+	# generate and split xml
+	str = doc.toxml()
+	x = str.index('<',1); y = str.index(' ', x)
+	z = str.index('>', y); prefix = str[x:y];
+	head = str[y:z]; str = str[z:]
+	
+	# reorder fields
+	for x in tmpl:
+		i = head.find(' '+x+'=')
+		if i < 0: continue
+		e = qstr_skip(head, i)
+		prefix += head[i:e]
+		head = head[:i] + head[e:]
+		
+	return prefix + head + str;
+	
+
+
 	
 def load_xml(str):
 	return xml.dom.minidom.parseString(str)

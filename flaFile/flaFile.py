@@ -1,6 +1,15 @@
 import hashlib
 from utils import *
 
+domHeadOrder = [
+	'xmlns:xsi', 'xmlns', 'backgroundColor', 'gridColor', 'guidesColor', 
+	'width', 'height', 'currentTimeline', 'xflVersion', 'creatorInfo', 
+	'platform', 'versionInfo', 'majorVersion', 'buildNumber', 'gridSpacingX', 
+	'gridSpacingY', 'snapAlign', 'snapAlignBorderSpacing', 'objectsSnapTo', 
+	'timelineHeight', 'timelineLabelWidth', 'nextSceneIdentifier', 
+	'viewOptionsPasteBoardView', 'playOptionsPlayLoop', 'playOptionsPlayPages', 
+	'playOptionsPlayFrameActions'];
+
 class Symbol:
 
 	def __init__(self, symbol, attr, data, name):
@@ -92,11 +101,15 @@ def parse_symbols(doc, files):
 	
 class FlaFile:
 
-
 	def __init__(self, fName):
 		self.files = load_zip(fName)
 		del self.files['bin/SymDepend.cache']
+		domData = self.files['DOMDocument.xml']
+		self.dom = load_xml(domData)
 		
+	def save(self, fName):
+		self.files['DOMDocument.xml'] =	save_xml(self.dom, domHeadOrder)
+		save_zip(fName, self.files)
 		
 """
 		
