@@ -3,9 +3,6 @@
 
 import re
 from collections import OrderedDict
-import time
-
-
 
 def SU(str,s):
 	return buffer(str, s)
@@ -32,7 +29,57 @@ class XmlNode:
 		self.tag = None
 		self.children = []
 		self.attr = OrderedDict()
+		
+	def __str__(self):
+		return self.get_outerXML()
+		
+	@staticmethod
+	def create_fromFile(name):
+		with open(name, 'r') as f:
+			return XmlNode.create_fromStr(f.read())
 	
+	@staticmethod
+	def create_fromStr(str):
+		node = XmlNode()
+		node.set_outerXML(str)
+		return node
+		
+	@staticmethod
+	def create_text(text):
+		node = XmlNode(); node.tag = "";
+		node.text = text; return node
+		
+	@staticmethod
+	def create_elem(tag, attr=OrderedDict()):
+		node = XmlNode(); node.tag = tag
+		node.attr = attr; return node
+	
+	# append nodes
+	def append_node(self, node):
+		self.children.append(node)
+	def append_text(self, text):
+		self.append_node(self.create_text(text))
+	def append_elem(self, tag, attr=OrderedDict()):
+		self.append_node(self.create_elem(tag, attr))
+		
+	# remove nodes
+	def node_index(node):
+		return self.children.index(node)
+	def remove_node(node):
+		return self.remove_index(node_index(node))
+	def remove_index(index):
+		return self.children.pop(index);
+	def remove_all():
+		self.children.clear();
+		
+	# search nodes
+	def find(self, tag):
+		for x in self.children:
+			if x.tag == tag: return x
+			y = x.find(tag);
+			if y: return y
+		return None
+
 	def get_innerXML(self, str=''):
 		for x in self.children:
 			str = x.get_outerXML(str)
@@ -83,9 +130,13 @@ class XmlNode:
 		if str[pos] == '/': return pos+2
 		return self.set_innerXML(str, pos+1);
 			
-node = XmlNode()
+node = XmlNode.create_fromFile('DOMDocument.xml')
 
-node.set_innerXML("<fred poop='greb'/>hello<joe poop='sdfsdf'>greb</joe>")
+#node.set_innerXML("<fred poop='greb'/>hello<joe poop='sdfsdf'>greb</joe>")
+#node.append_elem('div')
+
+#print node.find('joe')
+
 print node.get_outerXML()
 
 
