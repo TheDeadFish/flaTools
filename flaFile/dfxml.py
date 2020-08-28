@@ -26,10 +26,10 @@ def encode_tag(tag, attr, hasChild=0):
 
 class XmlNode:
 
-	def __init__(self):
-		self.tag = None
+	def __init__(self, tag=None, attr=None):
+		if not attr: attr = OrderedDict()
+		self.tag = tag; self.attr = attr;
 		self.children = []
-		self.attr = OrderedDict()
 		
 	def __str__(self):
 		return self.get_outerXML()
@@ -47,21 +47,20 @@ class XmlNode:
 		
 	@staticmethod
 	def create_text(text):
-		node = XmlNode(); node.tag = "";
+		node = XmlNode("");
 		node.text = text; return node
 		
 	@staticmethod
-	def create_elem(tag, attr=OrderedDict()):
-		node = XmlNode(); node.tag = tag
-		node.attr = attr; return node
+	def create_elem(tag=None, attr=None):
+		return XmlNode(tag, attr);
 	
 	# append nodes
 	def append_node(self, node):
-		self.children.append(node)
+		self.children.append(node); return node
 	def append_text(self, text):
-		self.append_node(self.create_text(text))
-	def append_elem(self, tag, attr=OrderedDict()):
-		self.append_node(self.create_elem(tag, attr))
+		return self.append_node(self.create_text(text))
+	def append_elem(self, tag, attr=None):
+		return self.append_node(self.create_elem(tag, attr))
 		
 	# remove nodes
 	def node_index(self, node):

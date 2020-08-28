@@ -42,3 +42,12 @@ def load_xml(str):
 	
 def elem_to_dict(elem):
 	return elem.attr
+	
+def indent_crlf(node, level):
+	node.append_text('\r\n'+level*' ')
+	
+def indent_elem(node, pre, post, tag, attr=None):
+	indent_crlf(node, pre)
+	ret = node.append_elem(tag, attr)
+	indent_crlf(node, post)
+	return ret
