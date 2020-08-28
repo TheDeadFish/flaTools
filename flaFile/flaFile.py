@@ -38,9 +38,10 @@ class Symbol:
 			self.hash = self.hash_; return;
 		hash = hashlib.sha1()
 		hash.update(self.hash_)
+		self.refs = [dict[x] for x in self.refs]
 		for x in self.refs:
-			dict[x].do_hash(dict);
-			hash.update(dict[x].hash)
+			x.do_hash(dict);
+			hash.update(x.hash)
 		self.hash = hash.digest();
 		
 	def init(self, data):
