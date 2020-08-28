@@ -64,14 +64,14 @@ class XmlNode:
 		self.append_node(self.create_elem(tag, attr))
 		
 	# remove nodes
-	def node_index(node):
+	def node_index(self, node):
 		return self.children.index(node)
-	def remove_node(node):
+	def remove_node(self, node):
 		return self.remove_index(node_index(node))
-	def remove_index(index):
+	def remove_index(self, index):
 		return self.children.pop(index);
-	def remove_all():
-		self.children.clear();
+	def remove_all(self):
+		self.children = []
 		
 	# search nodes
 	def find(self, tag):

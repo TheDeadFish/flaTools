@@ -1,4 +1,5 @@
 import hashlib
+from collections import OrderedDict
 from utils import *
 
 domHeadOrder = [
@@ -12,11 +13,15 @@ domHeadOrder = [
 
 class Symbol:
 
-	def __init__(self, symbol, attr):
-		self.symbol = symbol;	self.attr = attr;
+	def __init__(self, tag, attr):
+		self.tag = tag;	self.attr = attr;
 		self.data = None; self.name = attr.get('name');
 		self.hash_ = None; self.hash = None;
 		self.refs = []; self.keep = False;
+		
+	@property
+	def symbol(self):
+		return self.tag == 'Include'
 		
 	def get_path(self):
 		if self.symbol: return 'LIBRARY/'+self.attr['href']
@@ -69,61 +74,30 @@ class FlaFile:
 		self.dom = load_xml(domData)
 				
 		# load the symbols
-		self.symbols = {}
-		self.__parse_symbols('media', False)
-		self.__parse_symbols('symbols', True)
+		self.symbols = OrderedDict()
+		self.__parse_symbols('media')
+		self.__parse_symbols('symbols')
 		for k,v in self.symbols.iteritems(): v.do_hash(self.symbols);
 		
 	def save(self, fName):
 		for k,v in self.symbols.iteritems(): self.files[v.get_path()] = v.data
+		self.__rebuild_symbols()
 		self.files['DOMDocument.xml'] =	save_xml(self.dom, domHeadOrder)
 		save_zip(fName, self.files)
 			
-	def __parse_symbols(self, nodeName, symbMode):
+	def __parse_symbols(self, nodeName):
 		node = self.dom.find(nodeName);
 		for x in node.children:
 			if not x.tag: continue
-			symb = Symbol(symbMode, elem_to_dict(x));
+			symb = Symbol(x.tag, elem_to_dict(x));
 			symb.init(self.files.pop(symb.get_path()))
 			self.symbols[symb.name] = symb
-			
+		node.remove_all()
 		
-		
-"""
-		
-		
-		
-		
-		
-	
-	
-	
-
-
-
-	
-	
-files = load_zip("MLP214_001-new.fla")
-
-
-doc = load_xml(files['DOMDocument.xml'])
-files['DOMDocument.xml'] = save_xml(doc, files['DOMDocument.xml'])
-
-print parse_symbols(doc, files)
-
-save_zip("out.fla", files)
-			
-			
-
-"""
-
-
-
-	
-	
-			
-
-
-
-
-
+	def __rebuild_symbols(self):
+		nodes = [self.dom.find('media'), self.dom.find('symbols')]
+		for k, v in self.symbols.iteritems():
+			nodes[v.symbol].append_text('\r\n          ')
+			nodes[v.symbol].append_elem(v.tag, v.attr)
+		nodes[0].append_text('\r\n     ')
+		nodes[1].append_text('\r\n     ')
