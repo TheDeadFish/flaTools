@@ -115,7 +115,6 @@ class FlaFile:
 	def __parse_symbols(self, nodeName, symDict):
 		node = self.dom.find(nodeName);
 		for x in node.children:
-			if not x.tag: continue
 			symb = Symbol(x.tag, elem_to_dict(x));
 			symb.init(self.files.pop(symb.get_path()))
 			symDict[symb.name] = symb
@@ -124,10 +123,7 @@ class FlaFile:
 	def __rebuild_symbols(self):
 		nodes = [self.dom.find('media'), self.dom.find('symbols')]
 		for v in self.symbols:
-			nodes[v.symbol].append_text('\r\n          ')
 			nodes[v.symbol].append_elem(v.tag, v.attr)
-		nodes[0].append_text('\r\n     ')
-		nodes[1].append_text('\r\n     ')
 		
 	def __parse_scene(self, symDict):
 		self.scene = []
@@ -138,24 +134,19 @@ class FlaFile:
 		node.remove_all()
 		
 	def __build_frames(self, frames, node):
-		node = indent_elem(node, 25, 20, 'frames')
+		node = node.append_elem('frames')
 		for frame in frames:
-			indent_crlf(node, 30)
 			node.append_node(frame.node)
-		if len(frames): indent_crlf(node, 25)
 		
 	def __build_layer(self, layers, node):
-		node = indent_elem(node, 15, 10, 'layers')
+		node = node.append_elem('layers')
 		for layer in layers:
-			indent_crlf(node, 20)
 			self.__build_frames(layer.frames,
 				node.append_elem('DOMLayer', layer.attr))
-		if len(self.scene): indent_crlf(node, 15)
 		
 	def __build_scene(self):
 		node = self.dom.find('timelines');
 		for scn in self.scene:
-			indent_crlf(node, 10)
 			self.__build_layer(scn.layers,
 				node.append_elem('DOMTimeline', scn.attr))
-		if len(self.scene): indent_crlf(node, 5)
+

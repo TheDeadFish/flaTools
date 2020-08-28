@@ -26,6 +26,9 @@ def encode_tag(tag, attr, hasChild=0):
 
 class XmlNode:
 
+	indentDepth = 0;
+	indentWidth = 5
+
 	def __init__(self, tag=None, attr=None):
 		if not attr: attr = OrderedDict()
 		self.tag = tag; self.attr = attr;
@@ -100,33 +103,52 @@ class XmlNode:
 		for x in self.children:
 			str = x.get_outerXML(str)
 		return str
+		
+	@staticmethod
+	def __do_indent(str):
+		if not XmlNode.indentWidth: return str
+		if str and str[-1] != '>': return str
+		if str or XmlNode.indentDepth: 
+			str += '\r\n'+XmlNode.indentDepth*' '
+		return str
 	
 	def get_outerXML(self, str=''):
 		if self.tag != None:
 			if self.tag == "": str += self.text; return str
+			str = self.__do_indent(str)
 			str += encode_tag(self.tag, self.attr, len(self.children));
 		
 		if not len(self.children): return str
+		XmlNode.indentDepth += XmlNode.indentWidth
 		str = self.get_innerXML(str)
-		if self.tag: str += '</%s>'%self.tag
+		XmlNode.indentDepth -= XmlNode.indentWidth
+		if self.tag:
+			str = self.__do_indent(str)
+			str += '</%s>'%self.tag
 		return str
 		
 	def set_innerXML(self, str, pos=0):
 		while pos < len(str):
 			if str.startswith('</', pos):
 				return str.index('>', pos)+1
-			node = XmlNode()
-			pos = node.set_outerXML(str, pos)
-			self.children.append(node)
+			
+			if str[pos] == '<':
+				# parse element
+				node = XmlNode()
+				pos = node.set_outerXML(str, pos)
+				self.children.append(node)
+			else:
+				# parse text node
+				end = str.find('<', pos)
+				if end < 0: end = len(str)
+				text = str[pos:end].strip()
+				if text: self.append_text(text)
+				pos = end;
+
 		return pos;
 			
 	def set_outerXML(self, str, pos=0):
-		# parse text node
-		if str[pos] != '<':
-			end = str.find('<', pos)
-			if end < 0: end = len(str)
-			self.text = str[pos:end]
-			self.tag = ""; return end
+		if str[pos] != '<':	raise
 			
 		# parse tag name
 		pos += 1
