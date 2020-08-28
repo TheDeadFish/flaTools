@@ -65,6 +65,26 @@ class Symbol:
 				pos = end
 		
 		self.hash_ = hash.digest();
+		
+class FlaFrame:
+	def __init__(self, node, dict):
+		self.attr = elem_to_dict(node)
+		refs = node.find_attr_all('libraryItemName')
+		self.refs = [dict[x] for x in refs]
+	
+class FlaLayer:
+	def __init__(self, node, dict):
+		self.attr = elem_to_dict(node)
+		self.frames = []
+		for x in node.find_all('DOMFrame'):
+			self.frames.append(FlaFrame(x, dict))
+	
+class FlaTimeLine:
+	def __init__(self, node, dict):
+		self.attr = elem_to_dict(node)
+		self.layers = []
+		for x in node.find_all('DOMLayer'):
+			self.layers.append(FlaLayer(x, dict))
 	
 class FlaFile:
 
@@ -79,6 +99,8 @@ class FlaFile:
 		self.__parse_symbols('media')
 		self.__parse_symbols('symbols')
 		for k,v in self.symbols.iteritems(): v.do_hash(self.symbols);
+		
+		self.__parse_scene();
 		
 	def save(self, fName):
 		for k,v in self.symbols.iteritems(): self.files[v.get_path()] = v.data
@@ -102,3 +124,11 @@ class FlaFile:
 			nodes[v.symbol].append_elem(v.tag, v.attr)
 		nodes[0].append_text('\r\n     ')
 		nodes[1].append_text('\r\n     ')
+		
+	def __parse_scene(self):
+		self.scene = []
+		node = self.dom.find('timelines');
+		for x in node.children:
+			if not x.tag: continue
+			self.scene.append(FlaTimeLine(x, self.symbols))
+		node.remove_all()

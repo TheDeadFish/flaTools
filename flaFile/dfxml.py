@@ -80,6 +80,22 @@ class XmlNode:
 			y = x.find(tag);
 			if y: return y
 		return None
+	
+	def find_all(self, tag):
+		return self._find_all(tag, [])
+	def find_attr_all(self, attr):
+		return self._find_attr_all(attr, [])
+	def _find_all(self, tag, lst):
+		for x in self.children:
+			if x.tag == tag: lst.append(x)
+			lst = x._find_all(tag, lst)
+		return lst
+	def _find_attr_all(self, attr, lst):
+		for x in self.children:
+			if attr in x.attr: lst.append(x.attr[attr])
+			lst = x._find_attr_all(attr, lst)
+		return lst
+	
 
 	def get_innerXML(self, str=''):
 		for x in self.children:
