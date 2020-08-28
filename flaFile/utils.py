@@ -1,5 +1,5 @@
 import zipfile
-import xml.dom.minidom
+from dfxml import XmlNode
 
 def list_add_unique(lst, item):
 	if item in lst: return
@@ -35,32 +35,10 @@ def save_zip(fName, files):
 			myzip.writestr(x, files[x])
 
 def save_xml(doc, tmpl):
-	# generate and split xml
-	str = doc.toxml()
-	x = str.index('<',1); y = str.index(' ', x)
-	z = str.index('>', y); prefix = str[x:y];
-	head = str[y:z]; str = str[z:]
-	
-	# reorder fields
-	for x in tmpl:
-		i = head.find(' '+x+'=')
-		if i < 0: continue
-		e = qstr_skip(head, i)
-		prefix += head[i:e]
-		head = head[:i] + head[e:]
-		
-	return prefix + head + str;
-	
-
-
+	return doc.get_outerXML();
 	
 def load_xml(str):
-	return xml.dom.minidom.parseString(str)
+	return XmlNode.create_fromStr(str)
 	
 def elem_to_dict(elem):
-	items = elem.attributes.items()
-	ret = {}
-	for x in items:
-		ret[x[0]] = x[1]
-	return ret
-	
+	return elem.attr

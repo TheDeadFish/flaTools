@@ -3,6 +3,7 @@
 
 import re
 from collections import OrderedDict
+import dfxmlent
 
 def SU(str,s):
 	return buffer(str, s)
@@ -16,7 +17,7 @@ def parse_prop(str, pos):
 def encode_tag(tag, attr, hasChild=0):
 	str = '<'+tag; 
 	for k, v in attr.iteritems():
-		quot = '"'; 
+		v = dfxmlent.encode(v); quot = '"'; 
 		if '"' in v: quot = "'"
 		str += ' %s=%s%s%s' % (k, quot, v, quot)
 	if hasChild: str += '>'
@@ -123,20 +124,9 @@ class XmlNode:
 		while str[pos] == ' ':
 			pos += 1; equ = str.index('=', pos)
 			end = str.index(str[equ+1], equ+3)
-			self.attr[str[pos:equ]] = str[equ+2:end]
+			self.attr[str[pos:equ]] = dfxmlent.decode(str[equ+2:end])
 			pos = end+1
 			
 		# parse children
 		if str[pos] == '/': return pos+2
 		return self.set_innerXML(str, pos+1);
-			
-node = XmlNode.create_fromFile('DOMDocument.xml')
-
-#node.set_innerXML("<fred poop='greb'/>hello<joe poop='sdfsdf'>greb</joe>")
-#node.append_elem('div')
-
-#print node.find('joe')
-
-print node.get_outerXML()
-
-

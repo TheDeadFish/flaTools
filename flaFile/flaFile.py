@@ -80,9 +80,9 @@ class FlaFile:
 		save_zip(fName, self.files)
 			
 	def __parse_symbols(self, nodeName, symbMode):
-		nodes = self.dom.getElementsByTagName(nodeName);
-		for x in nodes[0].childNodes:
-			if x.nodeType != x.ELEMENT_NODE: continue
+		node = self.dom.find(nodeName);
+		for x in node.children:
+			if not x.tag: continue
 			symb = Symbol(symbMode, elem_to_dict(x));
 			symb.init(self.files.pop(symb.get_path()))
 			self.symbols[symb.name] = symb
