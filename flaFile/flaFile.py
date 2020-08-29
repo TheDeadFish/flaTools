@@ -2,6 +2,11 @@ import hashlib
 from collections import OrderedDict
 from utils import *
 import re
+
+class FlaIdent:
+	def __init__(self, file):
+		self.file = file
+		self.name = file
 	
 class FlaNode:
 	def __init__(self):	self.refs = []
@@ -11,6 +16,7 @@ class FlaNode:
 	def name(self, x): self.attr['name'] = x
 	def __getitem__(self, i): return self.refs[i]
 	def __iter__(self): return self.refs.__iter__()
+	def append(self, x): self.refs += x
 	
 	def get(self, i=None):
 		if isinstance(i, FlaNode): return i;
@@ -100,27 +106,39 @@ class FlaTimeLine(FlaNode):
 class FlaFile:
 
 	def __init__(self, fName):
+		self.ident = FlaIdent(fName)
 		self.files = load_zip(fName)
 		del self.files['bin/SymDepend.cache']
 		domData = self.files['DOMDocument.xml']
 		self.dom = load_xml(domData)
 				
 		# load the symbols
-		symDict = OrderedDict()
+		symDict = {}
 		self.__load_symbols(symDict);
 		self.__parse_scene(symDict);
-		self.symbols = [v for k,v in symDict.iteritems()]
+		
+	@property
+	def ident(self): return self.ident.name;
+	@ident.setter
+	def ident(self, x): self.ident.name;
 		
 	def save(self, fName):
-		for v in self.symbols: self.files[v.get_path()] = v.data
-		self.__rebuild_symbols(); self.__build_scene()
+		symbols = self.__gc_symbols()
+		
+	
+	
+		for v in symbols: self.files[v.get_path()] = v.data
+		self.__rebuild_symbols(symbols); 
+		
+		self.__build_scene()
 		self.files['DOMDocument.xml'] =	save_xml(self.dom)
 		save_zip(fName, self.files)
 		
-	def gc_symbols(self):
-		nodeset = set()
-		self.__ge_recurese(nodeset, self.scene)
-		self.symbols = list(nodeset)
+	def hash_dedup(self):
+		pass
+
+		
+
 	
 	# layer manipulation
 	def scene_get(self, i=None):
@@ -146,12 +164,13 @@ class FlaFile:
 		for x in node.children:
 			symb = Symbol(x.tag, elem_to_dict(x));
 			symb.init(self.files.pop(symb.get_path()))
+			symb.ident = self.ident
 			symDict[symb.name] = symb
 		node.remove_all()
 		
-	def __rebuild_symbols(self):
+	def __rebuild_symbols(self, symbols):
 		nodes = [self.dom.find('media'), self.dom.find('symbols')]
-		for v in self.symbols:
+		for v in symbols:
 			nodes[v.symbol].append_elem(v.tag, v.attr)
 		
 	def __parse_scene(self, symDict):
@@ -179,8 +198,17 @@ class FlaFile:
 			self.__build_layer(scn.refs,
 				node.append_elem('DOMTimeline', scn.attr))
 				
+	def __gc_symbols(self):
+		nodeset = set()
+		self.__ge_recurese(nodeset, self.scene)
+		return list(nodeset)
+				
 	def __ge_recurese(self, nodeset, node):
 		if isinstance(node, Symbol): 
 			if node in nodeset: return
 			nodeset.add(node)
 		for x in node: self.__ge_recurese(nodeset, x)
+		
+	def __reassign_names(self):
+		pass
+	
