@@ -34,7 +34,7 @@ def save_zip(fName, files):
 		for x in files:
 			myzip.writestr(x, files[x])
 
-def save_xml(doc, tmpl):
+def save_xml(doc):
 	return doc.get_outerXML();
 	
 def load_xml(str):

@@ -1,15 +1,6 @@
 import hashlib
 from collections import OrderedDict
 from utils import *
-
-domHeadOrder = [
-	'xmlns:xsi', 'xmlns', 'backgroundColor', 'gridColor', 'guidesColor', 
-	'width', 'height', 'currentTimeline', 'xflVersion', 'creatorInfo', 
-	'platform', 'versionInfo', 'majorVersion', 'buildNumber', 'gridSpacingX', 
-	'gridSpacingY', 'snapAlign', 'snapAlignBorderSpacing', 'objectsSnapTo', 
-	'timelineHeight', 'timelineLabelWidth', 'nextSceneIdentifier', 
-	'viewOptionsPasteBoardView', 'playOptionsPlayLoop', 'playOptionsPlayPages', 
-	'playOptionsPlayFrameActions'];
 	
 class FlaNode:
 	def __init__(self):	self.refs = []
@@ -133,9 +124,13 @@ class FlaFile:
 	def save(self, fName):
 		for v in self.symbols: self.files[v.get_path()] = v.data
 		self.__rebuild_symbols(); self.__build_scene()
-		self.files['DOMDocument.xml'] =	save_xml(self.dom, domHeadOrder)
+		self.files['DOMDocument.xml'] =	save_xml(self.dom)
 		save_zip(fName, self.files)
 		
+	def gc_symbols(self):
+		nodeset = set()
+		self.__ge_recurese(nodeset, self.scene)
+		self.symbols = list(nodeset)
 	
 	# layer manipulation
 	def scene_get(self, i=None):
@@ -193,4 +188,7 @@ class FlaFile:
 		for scn in self.scene:
 			self.__build_layer(scn.refs,
 				node.append_elem('DOMTimeline', scn.attr))
-
+				
+	def __ge_recurese(self, nodeset, node):
+		if isinstance(node, Symbol): nodeset.add(node)
+		for x in node: self.__ge_recurese(nodeset, x)
