@@ -62,6 +62,7 @@ class Symbol(FlaNode):
 		
 		pos = 0
 		if self.symbol:
+			pos = self.data.find('<layers>')
 			xx = re.finditer(r'(libraryItemName|soundName)="([^"]*)"', self.data)
 			for x in xx:
 				curPos = x.start(2)
@@ -70,7 +71,7 @@ class Symbol(FlaNode):
 				self.refs.append(dict[name])
 				hash.update(dict[name].hash)
 				pos = curPos
-		
+
 		hash.update(buffer(self.data, pos));
 		self.hash = hash.digest();
 		
@@ -123,10 +124,8 @@ class FlaFile:
 	def ident(self, x): self.ident.name;
 		
 	def save(self, fName):
+		self.hash_dedup()
 		symbols = self.__gc_symbols()
-		
-	
-	
 		for v in symbols: self.files[v.get_path()] = v.data
 		self.__rebuild_symbols(symbols); 
 		
@@ -135,10 +134,15 @@ class FlaFile:
 		save_zip(fName, self.files)
 		
 	def hash_dedup(self):
-		pass
-
-		
-
+		symbols = self.__gc_symbols()
+		hashDict = {}; refMap = {}
+		for x in symbols:
+			if x.hash in hashDict:
+				print x.name
+				refMap[x] = hashDict[x.hash]
+			else:	hashDict[x.hash] = x
+		for x in symbols:
+			self.refs = [refMap.get(x, x) for x in symbols]
 	
 	# layer manipulation
 	def scene_get(self, i=None):
@@ -197,11 +201,18 @@ class FlaFile:
 		for scn in self.scene:
 			self.__build_layer(scn.refs,
 				node.append_elem('DOMTimeline', scn.attr))
-				
+
+	@staticmethod
+	def __filesort(x):
+		return x.ident.name+x.name
+
 	def __gc_symbols(self):
 		nodeset = set()
 		self.__ge_recurese(nodeset, self.scene)
-		return list(nodeset)
+		symbols = list(nodeset)
+		symbols.sort(key=self.__filesort)
+		return symbols
+		
 				
 	def __ge_recurese(self, nodeset, node):
 		if isinstance(node, Symbol): 
@@ -211,4 +222,3 @@ class FlaFile:
 		
 	def __reassign_names(self):
 		pass
-	
