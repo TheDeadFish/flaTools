@@ -2,11 +2,12 @@ import hashlib
 from collections import OrderedDict
 from utils import *
 import re
+import os
 
 class FlaIdent:
 	def __init__(self, file):
-		self.file = file
-		self.name = file
+		self.file = file		
+		self.name = os.path.splitext(os.path.basename(file))[0]
 	
 class FlaNode:
 	def __init__(self):	self.refs = []
@@ -41,17 +42,22 @@ class Symbol(FlaNode):
 		self.tag = tag;	self.attr = attr;
 		self.data = None; self.name = attr.get('name');
 		self.hash_ = None; self.hash = None;
-		self.keep = False;
 		
 	@property
 	def symbol(self):
 		return self.tag == 'Include'
 		
+	@property
+	def href(self): return self.attr[self.attrHref()]
+	@href.setter
+	def href(self, x): self.attr[self.attrHref()] = x
+		
 	def get_path(self):
-		if self.symbol: return 'LIBRARY/'+self.attr['href']
-		return 'bin/'+self.attr[self.attrHref()]
+		if self.symbol: return 'LIBRARY/'+self.href
+		return 'bin/'+self.href
 		
 	def attrHref(self):
+		if self.symbol: return 'href'
 		for x in self.attr:
 			if x.endswith("HRef"):
 				return x
@@ -64,6 +70,7 @@ class Symbol(FlaNode):
 		if self.symbol:
 			pos = self.data.find('<layers>')
 			xx = re.finditer(r'(libraryItemName|soundName)="([^"]*)"', self.data)
+			
 			for x in xx:
 				curPos = x.start(2)
 				hash.update(buffer(self.data, curPos, curPos-pos))
@@ -78,7 +85,16 @@ class Symbol(FlaNode):
 	def init(self, data):
 		self.data = data
 		if self.symbol:
-			self.name = index_qstr(self.data, 'name="');
+			x = re.search(r'name="([^"]*)"', self.data)
+			self.refpos = [(x.start(1), x.end(1))]
+			self.name = x.group(1)
+			print self.name
+			
+	def rebuild(self):
+		if not self.symbol: return
+		
+	
+	
 		
 class FlaFrame(FlaNode):
 	def __init__(self, node, dict):
@@ -126,6 +142,7 @@ class FlaFile:
 	def save(self, fName):
 		self.hash_dedup()
 		symbols = self.__gc_symbols()
+		self.__reassign_names(symbols)
 		for v in symbols: self.files[v.get_path()] = v.data
 		self.__rebuild_symbols(symbols); 
 		
@@ -133,6 +150,7 @@ class FlaFile:
 		self.files['DOMDocument.xml'] =	save_xml(self.dom)
 		save_zip(fName, self.files)
 		
+
 	def hash_dedup(self):
 		symbols = self.__gc_symbols()
 		hashDict = {}; refMap = {}
@@ -141,8 +159,8 @@ class FlaFile:
 				print x.name
 				refMap[x] = hashDict[x.hash]
 			else:	hashDict[x.hash] = x
-		for x in symbols:
-			self.refs = [refMap.get(x, x) for x in symbols]
+		for s in symbols:
+			s.refs = [refMap.get(x, x) for x in s]
 	
 	# layer manipulation
 	def scene_get(self, i=None):
@@ -220,5 +238,28 @@ class FlaFile:
 			nodeset.add(node)
 		for x in node: self.__ge_recurese(nodeset, x)
 		
-	def __reassign_names(self):
-		pass
+	@staticmethod
+	def __namecat(sym, name):
+		return '%s;%s' % (sym.ident.name, name)
+	
+	@staticmethod
+	def __reassign_names(symbols):
+		names = set(); files = set();
+		
+		for sym in symbols:
+				
+			# fix name
+			if sym.name in names:
+				sym.name = FlaFile.__namecat(sym, sym.name)
+			names.add(sym.name)
+			
+			# fix href
+			if sym.symbol:
+				href = sym.href
+				if href in files:
+					x = os.path.split(sym.href)
+					href = x[0]+'/' if x[0] else ''
+					href += FlaFile.__namecat(sym, x[1])
+				files.add(sym.href)
+			
+			sym.rebuild()
