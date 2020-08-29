@@ -1,6 +1,7 @@
 import hashlib
 from collections import OrderedDict
 from utils import *
+import re
 	
 class FlaNode:
 	def __init__(self):	self.refs = []
@@ -51,37 +52,26 @@ class Symbol(FlaNode):
 
 	def do_hash(self, dict):
 		if self.hash: return;
-		if not len(self.refs):
-			self.hash = self.hash_; return;
 		hash = hashlib.sha1()
-		hash.update(self.hash_)
-		self.refs = [dict[x] for x in self.refs]
-		for x in self.refs:
-			x.do_hash(dict);
-			hash.update(x.hash)
+		
+		pos = 0
+		if self.symbol:
+			xx = re.finditer(r'(libraryItemName|soundName)="([^"]*)"', self.data)
+			for x in xx:
+				curPos = x.start(2)
+				hash.update(buffer(self.data, curPos, curPos-pos))
+				name = x.group(2); dict[name].do_hash(dict)
+				self.refs.append(dict[name])
+				hash.update(dict[name].hash)
+				pos = curPos
+		
+		hash.update(buffer(self.data, pos));
 		self.hash = hash.digest();
 		
 	def init(self, data):
 		self.data = data
-		hash = hashlib.sha1()
-		if not self.symbol:
-			hash.update(data);
-		else:
+		if self.symbol:
 			self.name = index_qstr(self.data, 'name="');
-			
-			# get library refs
-			pos = self.data.index('>')+1
-			while True:
-				prevPos = pos
-				pos = find_end(self.data, 'libraryItemName="', pos)
-				if pos < 0: 
-					hash.update(buffer(self.data, prevPos)); break;
-				hash.update(buffer(self.data, prevPos, pos-prevPos))
-				end = self.data.index('"', pos)	
-				list_add_unique(self.refs, self.data[pos:end])
-				pos = end
-		
-		self.hash_ = hash.digest();
 		
 class FlaFrame(FlaNode):
 	def __init__(self, node, dict):
@@ -190,5 +180,7 @@ class FlaFile:
 				node.append_elem('DOMTimeline', scn.attr))
 				
 	def __ge_recurese(self, nodeset, node):
-		if isinstance(node, Symbol): nodeset.add(node)
+		if isinstance(node, Symbol): 
+			if node in nodeset: return
+			nodeset.add(node)
 		for x in node: self.__ge_recurese(nodeset, x)
